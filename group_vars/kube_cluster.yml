@@ -7,6 +7,9 @@ main_nodes_ips_list: "{% set IP_ARR=[] %}{% for host in groups['node'] %}{% if I
 kube_cluster_ips: "{{ groups['kube_cluster'] | map('extract', hostvars, ['ansible_host']) | list }}"
 es_nodes_ips_list: "{%for host in groups['node']%}\"http://{{hostvars[host]['ansible_host']}}:31111\"{% if not loop.last %}, {% endif %}{% endfor %}"
 
+kibana_ip: "{{ ( hostvars[groups['kibana'][0]]['ansible_default_ipv4'].address | default(groups['master'][0]) ) }}"
+kibana_addr: "http://{{kibana_ip}}:32222"
+
 nodes_group: "groups['{{kube_nodes}}']"
 nodes_length: "{{ nodes_group | length }}"
 
@@ -18,6 +21,6 @@ pvc_capacity: 30
 es_mem: 2
 
 kube_cataio_dir: /etc/kubernetes/cataio
-kube_cataio_pv_dir: "/home/{{ansible_user}}/.cataio-data"
+kube_cataio_pv_dir: "/mnt/nvme/.cataio-data"
 cataio_es_user: "cataio"
 cataio_es_pass: "cataiopw"

@@ -1,0 +1,93 @@
+---
+
+- include_vars: group_vars/kube_cluster.yml
+
+- name: Delete CatBpf-original results directory (if it exists)
+  become: yes
+  file:
+    path: "{{ filebench_dir }}/catbpf_original_results"
+    state: absent
+
+- name: Create CatBpf-original results directory
+  file:
+    path: "{{ filebench_dir }}/catbpf_original_results"
+    state: directory
+
+- name: Copy fileserver workload
+  copy:
+    src: ../../shared_files/fileserver.f
+    dest: "{{ filebench_dir }}/fileserver.f"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode:  0644
+
+- shell: echo 0 > /proc/sys/kernel/randomize_va_space
+  become: yes
+
+- name: Start Dstat
+  shell: screen -S "FILEBENCH_CAT_O_DSTAT_{{run_number}}" -d -m dstat --time --cpu --mem --net --disk --swap --output "{{ filebench_dir }}/catbpf_original_results/dstat.csv"
+
+- name: Pause for 10 secons
+  pause:
+    seconds: 10
+
+- name: Running filebench (with CatBpf-original) [run={{run_number}}]
+  docker_container:
+    name: catbpf_original_filebench
+    image: taniaesteves/filebench_catbpf_original:latest
+    state: started
+    recreate: yes
+    detach: false
+    pid_mode: host
+    hostname: ${HOSTNAME}
+    privileged: true
+    volumes:
+      - /lib/modules:/lib/modules:ro
+      - /usr/src:/usr/src:ro
+      - /sys/kernel/debug/:/sys/kernel/debug/:ro
+      - "{{ filebench_dir }}/catbpf_original_results:/catbpf_data"
+      - "{{ filebench_dir }}/fileserver.f:/filebench/workloads/fileserver.f"
+    command:
+      - " {{catbpf_original_flags}} /usr/local/bin/filebench -f /filebench/workloads/fileserver.f"
+  register: catbpf_original_container
+
+- name: Pause for 10 secons
+  pause:
+    seconds: 10
+
+- name: Stop dstat
+  shell: screen -X -S "FILEBENCH_CAT_O_DSTAT_{{run_number}}" quit
+  ignore_errors: true
+
+- assert:
+    that:
+      - "not catbpf_original_container.failed"
+      - "catbpf_original_container.container.State.Status == 'exited'"
+
+- name: Save logs
+  shell: docker logs catbpf_original_filebench > "{{ filebench_dir }}/catbpf_original_results/docker_logs.txt" 2>&1
+
+- shell: ls -lah {{ filebench_dir }}/catbpf_original_results/CATlog.json
+  become: yes
+  ignore_errors: true
+  register: trace_ls_size
+
+- debug:
+    msg: "{{trace_ls_size.stdout}}"
+  ignore_errors: true
+
+- shell: rm {{ filebench_dir }}/catbpf_original_results/CATlog.json
+  become: yes
+  ignore_errors: true
+
+- shell: (cd "{{ filebench_dir }}/catbpf_original_results"; find . -maxdepth 1 -type f) | cut -d'/' -f2
+  register: files_to_copy
+
+- name: Save results
+  fetch:
+    src: "{{ filebench_dir }}/catbpf_original_results/{{ file_item }}"
+    dest: "final_cataio_results/filebench/{{cat_o_result_dir}}/run_{{run_number}}/"
+    flat: yes
+  with_items: "{{ files_to_copy.stdout_lines }}"
+  loop_control:
+    loop_var: file_item

@@ -40,7 +40,7 @@
     dest: /etc/docker/daemon.json
   register: RestartDocker
 
-- name: Restaring Docker...
+- name: Restarting Docker...
   service:
     name: docker
     state: restarted

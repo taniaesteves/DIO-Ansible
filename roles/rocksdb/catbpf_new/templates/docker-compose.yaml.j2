@@ -1,0 +1,27 @@
+version: '2.4'
+services:
+  catbpf_rocksdb:
+      image: taniaesteves/rocksdb_catbpf:v2
+      pid: host
+      hostname: {{ target_hostname.stdout }}
+      privileged: true
+      mem_limit: 1024m
+      blkio_config:
+        device_write_bps:
+          - path: /dev/sda
+            rate: 200mb
+      command: ycsbwklda 8 8 1024 catbpf-ycsbwklda-8-8-1024
+      volumes:
+        - /lib/modules:/lib/modules:ro
+        - /usr/src:/usr/src:ro
+        - /sys/kernel/debug/:/sys/kernel/debug/:ro
+        - /tmp/cataio:/tmp/cataio
+        - {{ rocksdb_dir }}/catbpf.yml:/usr/share/catbpf/conf/config.yaml:ro
+        - {{ rocksdb_dir }}/catbpf_results:/catbpf_data
+        - {{ rocksdb_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
+        - {{ rocksdb_dir }}/rocksdb_data/results:/rocks_db/workloads/results
+      environment:
+        - ROCKSDB_LOAD={{rocksdb_load}}
+        - ROCKSDB_OPS={{rocksdb_ops}}
+        - ROCKSDB_SCANOPS={{rocksdb_scanops}}
+      stop_grace_period: 2m

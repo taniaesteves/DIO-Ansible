@@ -28,7 +28,7 @@
 - name: Deploy the Elasticsearch cluster
   kubernetes.core.k8s:
     state: present
-    src: "{{ kube_cataio_dir }}/elasticSearch.yml"
+    src: "{{ kube_cataio_dir }}/elasticsearch.yml"
     wait: true
 
 - name: Deploy Kibana instance

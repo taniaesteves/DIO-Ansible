@@ -1,0 +1,21 @@
+version: '2.4'
+services:
+  vanilla_rocksdb:
+      image: taniaesteves/rocksdb_vanilla:latest
+      pid: host
+      hostname: {{ target_hostname.stdout }}
+      privileged: true
+      mem_limit: 1024m
+      blkio_config:
+        device_write_bps:
+          - path: /dev/sda
+            rate: 200mb
+      command: ycsbwklda 8 8 1024 vanilla-ycsbwklda-8-8-1024
+      volumes:
+        - {{ rocksdb_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
+        - {{ rocksdb_dir }}/rocksdb_data/results:/rocks_db/workloads/results
+      environment:
+        - ROCKSDB_LOAD={{rocksdb_load}}
+        - ROCKSDB_OPS={{rocksdb_ops}}
+        - ROCKSDB_SCANOPS={{rocksdb_scanops}}
+      stop_grace_period: 2m

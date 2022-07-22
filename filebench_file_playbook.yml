@@ -1,0 +1,68 @@
+---
+
+- hosts: test
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Clearing the cache
+    shell: sync; echo 3 > /proc/sys/vm/drop_caches
+    register: caches_clean
+  tags:
+    - always
+
+- name: Vanilla
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/vanilla, when: caches_clean, tags: ['never','file_vanilla'] }
+
+- name: Strace
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/strace, when: caches_clean, tags: ['never','file_strace'] }
+
+
+- name: CatBpf Original (MinHash)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_original, when: caches_clean, tags: ['never','file_catbpf_original_minhash'], cat_o_result_dir: "catbpf_original_minhash" }
+
+- name: CatBpf Original (Text)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_original, when: caches_clean, tags: ['never','file_catbpf_original_text'],  catbpf_original_flags: "--stats -c 4 --text", cat_o_result_dir: "catbpf_original_text"}
+
+- name: CatBpf New (selected events, wait_timout=0, content=plain)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_new, when: caches_clean, tags: ['never','file_catbpf_new_filter_nowait_plain'], catbpf_eswriter_enabled: false, catbpf_filewriter_enabled: true, catbpf_events: ["open", "openat", "creat", "read", "pread64", "write", "pwrite64"], catbpf_wait_timeout: 0, cat_n_result_dir: "catbpf_new_filter_nowait_plain", catbpf_content_form: "plain", catbpf_prof_on: true }
+
+- name: CatBpf New (selected events, wait_timout=0, content=off)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_new, when: caches_clean, tags: ['never','file_catbpf_new_filter_nowait'], catbpf_eswriter_enabled: false, catbpf_filewriter_enabled: true, catbpf_events: ["open", "openat", "creat", "read", "pread64", "write", "pwrite64"], catbpf_wait_timeout: 0, cat_n_result_dir: "catbpf_new_filter_nowait", catbpf_prof_on: true }
+
+- name: CatBpf New (selected events, wait_timout=-1, content=off)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_new, when: caches_clean, tags: ['never','file_catbpf_new_filter'], catbpf_eswriter_enabled: false, catbpf_filewriter_enabled: true, catbpf_events: ["open", "openat", "creat", "read", "pread64", "write", "pwrite64"], catbpf_wait_timeout: -1, cat_n_result_dir: "catbpf_new_filter", catbpf_prof_on: true }
+
+- name: CatBpf New (all events, wait_timout=-1, content=off)
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: filebench/catbpf_new, when: caches_clean, tags: ['never','file_catbpf_new_all'], catbpf_eswriter_enabled: false, catbpf_filewriter_enabled: true, catbpf_events: ["all"], catbpf_wait_timeout: -1, cat_n_result_dir: "catbpf_new_all", catbpf_prof_on: true }

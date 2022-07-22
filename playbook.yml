@@ -5,7 +5,6 @@
   roles:
     - { role: docker, tags: docker }
 
-
 - hosts: master
   gather_facts: yes
   become: yes
@@ -18,3 +17,10 @@
   become: yes
   roles:
     - { role: kubernetes/node, tags: node }
+
+- hosts: test
+  gather_facts: yes
+  become: yes
+  roles:
+    - { role: docker, tags: test }
+    - { role: docker-compose, tags: test }

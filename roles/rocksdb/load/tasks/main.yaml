@@ -1,0 +1,77 @@
+
+---
+
+- include_vars: group_vars/kube_cluster.yml
+
+- name: Delete Load Results directory (if it exists)
+  become: yes
+  file:
+    path: "{{ rocksdb_dir }}/load_results"
+    state: absent
+
+- name: Create Load Results directory
+  file:
+    path: "{{ rocksdb_dir }}/load_results"
+    state: directory
+
+- name: Delete RocksDB directory (if it exists)
+  become: yes
+  file:
+    path: "{{ rocksdb_dir }}/rocksdb_data"
+    state: absent
+
+- name: Create RocksDB directory
+  file:
+    path: "{{ rocksdb_dir }}/rocksdb_data"
+    state: directory
+
+- name: Running rocksdb (vanilla) [run={{run_number}}]
+  docker_container:
+    name: vanilla_rocksdb
+    image: taniaesteves/rocksdb_vanilla:latest
+    state: started
+    recreate: yes
+    detach: false
+    pid_mode: host
+    hostname: ${HOSTNAME}
+    command: "fillrandom 8 8 1024 fillrandom-8-8-1024"
+    volumes:
+      - "{{ rocksdb_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore"
+      - "{{ rocksdb_dir }}/rocksdb_data/results:/rocks_db/workloads/results"
+    env:
+      ROCKSDB_LOAD: "{{rocksdb_load}}"
+      ROCKSDB_OPS: "{{rocksdb_ops}}"
+      ROCKSDB_SCANOPS: "{{rocksdb_scanops}}"
+  register: rocksdb_vanilla_container
+
+- assert:
+    that:
+      - "not rocksdb_vanilla_container.failed"
+      - "rocksdb_vanilla_container.container.State.Status == 'exited'"
+
+- name: Save logs
+  shell: docker logs vanilla_rocksdb > "{{ rocksdb_dir }}/load_results/docker_logs.txt" 2>&1
+
+- name: Copy files from /rocksdb_data/results/ to load_results
+  copy:
+    remote_src: True
+    src: "{{ rocksdb_dir }}/rocksdb_data/results/"
+    dest: "{{ rocksdb_dir }}/load_results"
+
+- shell: (cd "{{ rocksdb_dir }}/load_results"; find . -maxdepth 1 -type f) | cut -d'/' -f2
+  register: files_to_copy
+
+- name: Save results
+  fetch:
+    src: "{{ rocksdb_dir }}/load_results/{{ file_item }}"
+    dest: "final_cataio_results/rocksdb/load/run_{{run_number}}/"
+    flat: yes
+  with_items: "{{ files_to_copy.stdout_lines }}"
+  loop_control:
+    loop_var: file_item
+
+- name: Copy files from /rocksdb_data/kvstore/ to backup_kvstore
+  copy:
+    remote_src: True
+    src: "{{ rocksdb_dir }}/rocksdb_data/kvstore/"
+    dest: "{{ rocksdb_dir }}/backup_kvstore"

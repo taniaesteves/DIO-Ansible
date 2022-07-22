@@ -1,0 +1,21 @@
+---
+- hosts: master
+  gather_facts: yes
+  tasks:
+  - name: Get appsio indices
+    shell: curl -u "{{cataio_es_user}}:{{cataio_es_pass}}" -k -X GET "{{master_ip}}:31111/appsio*?pretty"
+    tags: get_indices
+    register: result
+
+  - debug: msg="{{result.stdout}}"
+    tags: get_indices
+
+  - name: Delete appsio indices
+    shell: curl -u "{{cataio_es_user}}:{{cataio_es_pass}}" -k -X DELETE "{{master_ip}}:31111/appsio*?pretty"
+    tags: delete_indices
+    register: result
+
+  - debug: msg="{{result.stdout}}"
+    tags:
+      - get_indices
+      - delete_indices
