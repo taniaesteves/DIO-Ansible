@@ -1,20 +1,27 @@
 ## Parse filebench IO Summary
 
 ```
-./scripts-parsing/parse_filebench_io_summary.sh <docker_logs>
+python3 scripts-parsing/parse_filebench_results.py <results_folder>
 ```
 
 ```
-./scripts-parsing/parse_filebench_io_summary.sh final_cataio_results/filebench/catbpf_new_all/run_1/docker_logs.txt
+python3 scripts-parsing/parse_filebench_results.py final_test_results/filebench
 ```
 
-## Parse CaT stats
+## Parse DIO stats
 
 ```
 python3 scripts-parsing/parse_stats.py <results_folder>
 ```
 
 ```
-python3 scripts-parsing/parse_stats.py final_cataio_results/filebench/
+python3 scripts-parsing/parse_stats.py final_test_results/filebench/
 ```
 
+
+# Packages required
+
+```
+pip3 install pandas
+pip3 install tqdm
+```

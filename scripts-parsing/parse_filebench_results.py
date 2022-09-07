@@ -1,38 +1,22 @@
 #
-# Script for parsing profiling results file from CatBpf
-# Run as follow: $ python3 parse_profiling.py <path to results dir>
+# Script for parsing Filebench results
+# Run as follow: $ python3 parse_filebench_results.py <path to results dir>
 # The path to results dir refer to the folder containing the different types of tests.
-# The script will seach for subdirectories (e.g., 'run_1', 'run_2', etc.) and parse the 'catbpf-profiling.json' file inside each subdirectory.
+# The script will search for subdirectories (e.g., 'run_1', 'run_2', etc.) and parse the 'filebench_output.txt' (or 'docker_logs.txt') file inside each subdirectory.
 import sys
 import os
-import json
-from statistics import mean
 import csv
-import collections
-from urllib.parse import _ResultMixinBytes
+import commons
 from pathlib import Path
 
-
-def list_dir(path):
-    return os.listdir(path)
-
-
-def get_json_data(profiling_file):
-    with open(profiling_file) as json_file:
-        data = json.load(json_file)
-    return data
-
-def Average(lst):
-    return mean(lst)
-
-def parse(path):
+def parseSetup(path):
     runs_data = dict()
-    runs = list_dir(path)
+    runs = commons.ListDir(path)
 
     # get data for each run
     for run in runs:
         run_p_file = path + "/" + run + "/filebench_output.txt"
-        print(">>>> Parsing file '{0}'".format(run_p_file))
+        print("++++++ Parsing file '{0}'".format(run_p_file))
         content = []
 
         results_file = Path(run_p_file)
@@ -41,9 +25,7 @@ def parse(path):
                 for ln in f:
                     if ln.__contains__("IO Summary"):
                         content = ln.split(" ")
-                        print("lines -> {0}".format(ln))
                         break
-
             if len(content) == 0:
                 print("Could not find IO Summary in file '{0}'".format(run_p_file))
                 continue
@@ -53,96 +35,92 @@ def parse(path):
                 for ln in f:
                     if ln.__contains__("IO Summary"):
                         content = ln.split(" ")
-                        print("lines -> {0}".format(ln))
                         break
-
             if len(content) == 0:
                 print("Could not find IO Summary in file '{0}'".format(run_p_file))
                 continue
 
         run_values = dict()
-        print("content -> {0}".format(content))
         run_values["operations"] = int(content[3])
-        print("operations -> {0}".format(run_values["operations"]))
         run_values["operations_per_sec"] = float(content[5])
-        print("operations_per_sec -> {0}".format(run_values["operations_per_sec"]))
         rd_wr = content[7].split("/")
         run_values["rd"] = int(rd_wr[0])
         run_values["wr"] = int(rd_wr[1])
-        print("rd -> {0}".format(run_values["rd"]))
-        print("wr -> {0}".format(run_values["wr"]))
         run_values["mb_per_sec"] = float(content[9].replace("mb/s",""))
-        print("mb_per_sec -> {0}".format(run_values["mb_per_sec"]))
         run_values["ms_per_op"] = float(content[10].replace("ms/op",""))
-        print("ms_per_op -> {0}".format(run_values["ms_per_op"]))
 
         for m in run_values:
             if not m in runs_data:
                 runs_data[m] = []
             runs_data[m].append(run_values[m])
 
-    # replace list of values by its average
-    print("runs data: ", runs_data)
+    # replace list of values by its average and standard deviation
     for cur in runs_data:
         values = runs_data[cur]
-        avg = float(round(Average(values), 3))
-        runs_data[cur] = avg
+        avg = commons.Average(values)
+        dev = commons.STDev (values)
+        runs_data[cur] = (avg, dev)
 
-
-    # sort dictionary
-    print(json.dumps(runs_data, indent=4, sort_keys=True))
     return runs_data
 
-def localize_floats(row):
-    return [
-        str(el).replace('.', ',') if isinstance(el, float) else el
-        for el in row
-    ]
+def parseAll(input_dir):
+    setups_dirs = commons.ListDir(input_dir)
+    all_data_dic = dict()
+    header = ["param"]
+    processed_dirs = 0
+
+    for dir in setups_dirs:
+        print("\n==> Parsing filebench results for test '{0}'.".format(dir))
+
+        try:
+            data = parseSetup(input_dir+"/"+dir)
+        except EnvironmentError:
+            continue
+
+        for key in data:
+            if not key in all_data_dic:
+                all_data_dic[key] = [0] * processed_dirs
+            all_data_dic[key].append(data[key])
+
+        for key in all_data_dic:
+            if key not in data:
+                all_data_dic[key].append((0,0))
+
+        header.append(dir+"-AVG")
+        header.append(dir+"-DEV")
+        processed_dirs += 1
+
+    return header, all_data_dic
+
+def storeCSV(header, data, output_file):
+    with open(output_file, 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+        writer.writerow(header)
+        for row in data:
+            cur_data = [row]
+            for val in data[row]:
+                cur_data.append(val[0])
+                cur_data.append(val[1])
+            writer.writerow(commons.LocalizeFloats(cur_data))
 
 def main():
     if (len(sys.argv)) <= 1:
         print("Script requires the path to results folder")
         exit(1)
 
-    args = sys.argv[1:]
-    csv_file = os.path.basename(os.path.normpath(args[0])) + "_filebench.csv"
-    out_dirs = list_dir(args[0])
-    all_data_dic = dict()
-    header = ["param"]
-    processed_dirs = 0
-    for dir in out_dirs:
-        print("\n------------------\n")
-        print(">> Parsing filebench results for test '{0}'.".format(dir))
+    try:
+        args = sys.argv[1:]
+        input_dir = args[0]
+        print("> Parsing Filebench results for folder '{0}'.".format(input_dir))
 
-        try:
-            data = parse(args[0]+"/"+dir)
-        except EnvironmentError: # parent of IOError, OSError *and* WindowsError where available
-            continue
+        output_file = os.path.basename(os.path.normpath(input_dir)) + "_filebench.csv"
 
-        print("run_data:", data)
-        for key in data:
-            if not key in all_data_dic:
-                all_data_dic[key] = [0] * processed_dirs
-            print("key -> {0}, value -> {1}".format(key, data[key]))
-            print("all_data:", all_data_dic)
-            all_data_dic[key].append(data[key])
+        header, data = parseAll(input_dir)
+        storeCSV(header, data, output_file)
+        print("\n> Results saved to file '{0}'.".format(output_file))
 
-        if len(data.keys()) != len(all_data_dic.keys()):
-            for key in all_data_dic:
-                if key not in data:
-                    all_data_dic[key] = 0
-        header.append(dir)
-        processed_dirs += 1
-
-    with open(csv_file, 'w', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f, delimiter=';')
-        writer.writerow(header)
-        for row in all_data_dic:
-            cur_data = [row]
-            cur_data += all_data_dic[row]
-            writer.writerow(localize_floats(cur_data))
-
-    print("Parsing results saved to file '{0}'.".format(csv_file))
+    except Exception as e:
+        print("Error: {0}".format(e))
 
 if __name__ == "__main__":
     main()

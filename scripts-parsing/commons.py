@@ -1,10 +1,11 @@
 import os
 import json
 from statistics import mean, stdev
+from subprocess import check_output
 
 
 def ListDir(path):
-    return os.listdir(path)
+    return sorted(os.listdir(path))
 
 def Average(lst):
     return float(round(mean(lst), 3))
@@ -25,3 +26,12 @@ def GetJsonData(path):
     with open(path) as json_file:
         data = json.load(json_file)
     return data
+
+
+def GetNumLines(file_path):
+    return int(check_output(["wc", "-l", file_path]).split()[0])
+
+
+def CreateDir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
