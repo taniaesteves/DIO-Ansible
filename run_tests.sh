@@ -315,15 +315,5 @@ function dio_filters {
 }
 
 
-# vanilla
-# old_dio_file
-# dio_null
-# strace
-# catbpf
-# dio_elk
-# dio_filters
-
-dio_null_profiling
-dio_elk_profiling
 
 "$@"
