@@ -1,5 +1,5 @@
-# cataio_ansible
-Ansible playbook to install and run the Cataio pipeline.
+# dio_ansible
+Ansible playbook to install and run the DIO pipeline.
 
 ## Install ansible and required modules
 
@@ -38,35 +38,35 @@ ansible-playbook -u <username> -i hosts.ini playbook.yml
 ansible-playbook -u <username> -i hosts.ini playbook.yml -e is_vm=true
 ```
 
-## Install Cataio pipeline
+## Install DIO pipeline
 
-### Prepare setup for Cataio pipeline:
+### Prepare setup for DIO pipeline:
 ```
-ansible-playbook -u <username> -i hosts.ini cataio_playbook.yml --tags prepare_setup
+ansible-playbook -u <username> -i hosts.ini dio_playbook.yml --tags prepare_setup
 ```
 
-### Deploy Cataio pipeline:
+### Deploy DIO pipeline:
 
 #### From scratch:
 ```
-ansible-playbook -u <username> -i hosts.ini cataio_playbook.yml --tags deploy_cataio -e run_all=true
+ansible-playbook -u <username> -i hosts.ini dio_playbook.yml --tags deploy_dio -e run_all=true
 ```
 
 #### From previous configuration:
 ```
-ansible-playbook -u <username> -i hosts.ini cataio_playbook.yml --tags deploy_cataio
+ansible-playbook -u <username> -i hosts.ini dio_playbook.yml --tags deploy_dio
 ```
 
-### Delete Cataio pipeline
+### Delete DIO pipeline
 
 #### Full delete:
 ```
-ansible-playbook -u <username> -i hosts.ini cataio_playbook.yml --tags delete_cataio -e run_all=true
+ansible-playbook -u <username> -i hosts.ini dio_playbook.yml --tags delete_dio -e run_all=true
 ```
 
 #### Keep PVs:
 ```
-ansible-playbook -u <username> -i hosts.ini cataio_playbook.yml --tags delete_cataio
+ansible-playbook -u <username> -i hosts.ini dio_playbook.yml --tags delete_dio
 ```
 
 ---

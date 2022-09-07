@@ -1,0 +1,91 @@
+---
+
+- include_vars: group_vars/kube_cluster.yml
+
+- name: Delete Vanilla results directory (if it exists)
+  become: yes
+  file:
+    path: "{{ rocksdb_dir }}/vanilla_results"
+    state: absent
+
+- name: Create Vanilla results directory
+  file:
+    path: "{{ rocksdb_dir }}/vanilla_results"
+    state: directory
+
+- name: Delete RocksDB directory (if it exists)
+  become: yes
+  file:
+    path: "{{ rocksdb_dir }}/rocksdb_data"
+    state: absent
+
+- name: Create RocksDB kvstore directory
+  file:
+    path: "{{ rocksdb_dir }}/rocksdb_data/kvstore"
+    state: directory
+
+- name: Copy files from backup_kvstore
+  copy:
+    remote_src: True
+    src: "{{ rocksdb_dir }}/backup_kvstore/"
+    dest: "{{ rocksdb_dir }}/rocksdb_data/kvstore/"
+
+- name: Get hostname
+  shell: uname -n
+  register: target_hostname
+
+- name: Create docker-compose file
+  template:
+    src: "templates/docker-compose.yaml.j2"
+    dest: "{{ rocksdb_dir }}/vanilla-docker-compose.yaml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode:  0644
+  become: yes
+
+- name: Start Dstat
+  shell: screen -S "rocksdb_VAN_DSTAT_{{run_number}}" -d -m python3 /usr/share/dstat/dstat --time --cpu --mem --net --disk --swap --output "{{ rocksdb_dir }}/vanilla_results/dstat.csv"
+
+- name: Pause for 10 secons
+  pause:
+    seconds: 10
+
+- name: Clearing the cache
+  shell: sync; echo 3 > /proc/sys/vm/drop_caches
+  register: caches_clean
+  become: yes
+
+- name: Start RocksDB (vanilla) [run={{run_number}}]
+  shell:
+    cmd: "docker-compose -f {{ rocksdb_dir }}/vanilla-docker-compose.yaml up"
+  register: compose_result
+
+- name: Pause for 10 secons
+  pause:
+    seconds: 10
+
+- name: Stop dstat
+  shell: screen -X -S "rocksdb_VAN_DSTAT_{{run_number}}" quit
+  ignore_errors: true
+
+
+- name: Save logs
+  shell: docker logs tests_rocksdb_vanilla_rocksdb_1 > "{{ rocksdb_dir }}/vanilla_results/docker_logs.txt" 2>&1
+
+- name: Copy files from vanilla_results to vanilla_results
+  copy:
+    remote_src: True
+    src: "{{ rocksdb_dir }}/rocksdb_data/results/"
+    dest: "{{ rocksdb_dir }}/vanilla_results"
+
+- shell: (cd "{{ rocksdb_dir }}/vanilla_results"; find . -maxdepth 1 -type f) | cut -d'/' -f2
+  register: files_to_copy
+
+- name: Save results
+  fetch:
+    src: "{{ rocksdb_dir }}/vanilla_results/{{ file_item }}"
+    dest: "final_test_results/rocksdb/vanilla/run_{{run_number}}/"
+    flat: yes
+  with_items: "{{ files_to_copy.stdout_lines }}"
+  loop_control:
+    loop_var: file_item

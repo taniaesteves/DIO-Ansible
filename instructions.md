@@ -1,32 +1,32 @@
 
 ## TAGS
-    - deploy_cataio
-    - delete_cataio
+    - deploy_dio
+    - delete_dio
 
 ## ENV
     - run_all (boolean)
 
 
-## Create Cataio from scratch
+## Create DIO from scratch
 
 ```
-$ ansible-playbook -u gsd deploy_cataio_playbook.yml --tags deploy_cataio -e run_all=true
+$ ansible-playbook -u gsd dio_playbook.yml --tags deploy_dio -e run_all=true
 ```
 
-## Just start Cataio
+## Just start DIO
 
 ```
-$ ansible-playbook -u gsd deploy_cataio_playbook.yml --tags deploy_cataio
+$ ansible-playbook -u gsd dio_playbook.yml --tags deploy_dio
 ```
 
-## Just stop Cataio
+## Just stop DIO
 
 ```
-$ ansible-playbook -u gsd deploy_cataio_playbook.yml --tags delete_cataio
+$ ansible-playbook -u gsd dio_playbook.yml --tags delete_dio
 ```
 
-## Delete completely Cataio
+## Delete completely DIO
 
 ```
-$ ansible-playbook -u gsd deploy_cataio_playbook.yml --tags delete_cataio -e run_all=true
+$ ansible-playbook -u gsd dio_playbook.yml --tags delete_dio -e run_all=true
 ```

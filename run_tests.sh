@@ -1,158 +1,329 @@
 #!/bin/bash
 
-mkdir -p ansible_logs
+LOGS_DIR="final_test_results/ansible_logs"
+
+mkdir -p $LOGS_DIR
 
 RUNS=3
 
-ansible-playbook -u gsd -i hosts-2es.ini reset-site.yaml
+# --------
+
+function reset_kube_cluster {
+    ansible-playbook -u gsd -i hosts.ini reset-site.yaml
+}
+
+function setup_kube_cluster {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    # create kubernetes cluster
+    ansible-playbook -u gsd -i hosts.ini playbook.yml
+
+    # prepare setup
+    ansible-playbook -u gsd -i hosts.ini dio_playbook.yml --tags prepare_setup
+}
+
+function mount_dio_pipeline {
+
+    # destroy previous dio pipeline
+    ansible-playbook -u gsd -i hosts.ini dio_playbook.yml --tags delete_dio -e run_all=true
+
+    # create new dio pipeline
+    ansible-playbook -u gsd -i hosts.ini dio_playbook.yml --tags deploy_dio -e run_all=true
+}
 
 # --------
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - Vanilla - file_vanilla - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_vanilla -e run_number="$i" | tee "ansible_logs/file_vanilla_$i.txt" ; #2>&1 ;
-done
+function vanilla {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    for ((i=1; i <= $RUNS; i++)); do
+        echo "Filebench - Vanilla - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags vanilla -e run_number="$i" | tee "$LOGS_DIR/t00_vanilla_$i.txt" ;
+    done
+}
+
+function strace {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    for ((i=1; i <= $RUNS; i++)); do
+        echo "Filebench - Strace - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags strace -e run_number="$i" | tee "$LOGS_DIR/strace_$i.txt" ;
+    done
+}
+
+function catbpf {
+    reset_kube_cluster
+
+    for ((i=1; i <= $RUNS; i++)); do
+        echo "Filebench - catbpf_minhash - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags catbpf_minhash -e run_number="$i" | tee "$LOGS_DIR/catbpf_minhash_$i.txt" ;
+
+        echo "Filebench - catbpf_text - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags catbpf_text -e run_number="$i" | tee "$LOGS_DIR/catbpf_text_$i.txt" ;
+    done
+}
+
+function old_dio_file {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    for ((i=1; i <= $RUNS; i++)); do
+        echo "Filebench - DIO - dio_file_filter_nowait_plain - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags dio_file_filter_nowait_plain -e run_number="$i"  | tee "$LOGS_DIR/dio_file_filter_nowait_plain_$i".txt; # 2>&1 ;
+
+        echo "Filebench - DIO - dio_file_filter_nowait - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags dio_file_filter_nowait -e run_number="$i" | tee "$LOGS_DIR/dio_file_filter_nowait_$i.txt" ;
+
+        echo "Filebench - DIO - dio_file_filter - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags dio_file_filter -e run_number="$i" | tee "$LOGS_DIR/dio_file_filter_$i.txt" ;
+
+        echo "Filebench - DIO - dio_file_all - Run $i"
+        ansible-playbook -u gsd filebench_playbook.yml  --tags dio_file_all -e run_number="$i" | tee "$LOGS_DIR/dio_file_all_$i.txt" ;
+    done
+}
 
 # --------
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - Strace - file_strace - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_strace -e run_number="$i" | tee "ansible_logs/file_strace_$i.txt" ; #2>&1 ;
-done
+function dio_null {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    mkdir -p $LOGS_DIR
+
+    for ((i=1; i <= $RUNS; i++)); do
+
+        # Run RAW setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-null_"$i"_raw.txt" ;
+
+        # Run DETAILED setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-null_"$i"_detailed.txt" ;
+
+        # Run DETAILED_PATHS setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-null_"$i"_detailed_paths.txt" ;
+
+        # Run DETAILED_ALL setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-null_"$i"_detailed_all.txt" ;
+
+        # RUN DETAILED_ALL_PLAIN setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-null_"$i"_detailed_all_plain.txt" ;
+
+        # RUN DETAILED_ALL_KHASH setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-null_"$i"_detailed_all_khash.txt" ;
+
+    done
+}
+
+function dio_file {
+    # reset kubernetes cluster
+    reset_kube_cluster
+
+    mkdir -p $LOGS_DIR
+
+    for ((i=1; i <= $RUNS; i++)); do
+
+        # Run RAW setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-file_"$i"_raw.txt" ;
+
+        # Run DETAILED setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-file_"$i"_detailed.txt" ;
+
+        # Run DETAILED_PATHS setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-file_"$i"_detailed_paths.txt" ;
+
+        # Run DETAILED_ALL setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-file_"$i"_detailed_all.txt" ;
+
+        # RUN DETAILED_ALL_PLAIN setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-file_"$i"_detailed_all_plain.txt" ;
+
+        # RUN DETAILED_ALL_KHASH setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-file_"$i"_detailed_all_khash.txt" ;
+
+    done
+}
+
+function dio_elk {
+    mkdir -p $LOGS_DIR
+
+    setup_kube_cluster
+
+    for ((i=1; i <= $RUNS; i++)); do
+
+        # Run RAW setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-1es_"$i"_raw.txt" ;
+
+        # Run DETAILED setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-1es_"$i"_detailed.txt" ;
+
+        # Run DETAILED_PATHS setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-1es_"$i"_detailed_paths.txt" ;
+
+        # Run DETAILED_ALL setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-1es_"$i"_detailed_all.txt" ;
+
+        # RUN DETAILED_ALL_PLAIN setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-1es_"$i"_detailed_all_plain.txt" ;
+
+        # RUN DETAILED_ALL_KHASH setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-1es_"$i"_detailed_all_khash.txt" ;
+
+    done
+}
 
 # --------
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_original_minhash - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_original_minhash -e run_number="$i" | tee "ansible_logs/file_catbpf_original_minhash_$i.txt" ; #2>&1 ;
-done
+function dio_null_profiling {
+    # reset kubernetes cluster
+    reset_kube_cluster
+    mkdir -p /home/gsd/new_profiling_dio_results/
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_original_text - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_original_text -e run_number="$i" | tee "ansible_logs/file_catbpf_original_text_$i.txt" ; #2>&1 ;
-done
+    for ((i=1; i <= $RUNS; i++)); do
 
-# --------
+        mkdir -p $LOGS_DIR
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_new_filter_nowait_plain - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_new_filter_nowait_plain -e run_number="$i"  | tee "ansible_logs/file_catbpf_new_filter_nowait_plain_$i".txt; # 2>&1 ;
-done
+        # Run RAW setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-null_"$i"_profiling_raw.txt" ;
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_new_filter_nowait - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_new_filter_nowait -e run_number="$i" | tee "ansible_logs/file_catbpf_new_filter_nowait_$i.txt" ; #2>&1 ;
-done
+        # Run DETAILED setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-null_"$i"_profiling_detailed.txt" ;
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_new_filter - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_new_filter -e run_number="$i" | tee "ansible_logs/file_catbpf_new_filter_$i.txt" ; #2>&1 ;
-done
+        # Run DETAILED_PATHS setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-null_"$i"_profiling_detailed_paths.txt" ;
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - file_catbpf_new_all - Run $i"
-    ansible-playbook -u gsd filebench_file_playbook.yml  --tags file_catbpf_new_all -e run_number="$i" | tee "ansible_logs/file_catbpf_new_all_$i.txt" ; #2>&1 ;
-done
+        # Run DETAILED_ALL setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-null_"$i"_profiling_detailed_all.txt" ;
 
-# --------
+        # RUN DETAILED_ALL_PLAIN setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-null_"$i"_profiling_detailed_all_plain.txt" ;
 
-ansible-playbook -u gsd -i hosts-1es.ini playbook.yml
-ansible-playbook -u gsd -i hosts-1es.ini cataio_playbook.yml --tags prepare_setup
+        # RUN DETAILED_ALL_KHASH setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_null_profiling_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-null_"$i"_profiling_detailed_all_khash.txt" ;
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - ES=1 - Run $i"
-    ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio -e run_number="$i" | tee "ansible_logs/catbpf-1es_$i.txt" ; #2>&1 ;
-done
+        # Backup results
+        sudo cp -r -n final_test_results/* /home/gsd/new_profiling_dio_results/
+        sudo rm -fr final_test_results
 
-# --------
+    done
+}
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - ES=1, filter tid - Run $i"
-    ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_filter_tid -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_filter_tid.txt" ; #2>&1 ;
-done
+function dio_file_profiling {
+    # reset kubernetes cluster
+    reset_kube_cluster
+    mkdir -p /home/gsd/new_profiling_dio_results/
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - ES=1, filter stat - Run $i"
-    ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_filter_stat -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_filter_stat.txt" ; #2>&1 ;
-done
+    for ((i=1; i <= $RUNS; i++)); do
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - ES=1, filter read - Run $i"
-    ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_filter_read -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_filter_read.txt" ; #2>&1 ;
-done
+        mkdir -p $LOGS_DIR
 
-# --------
+        # Run RAW setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-file_"$i"_profiling_raw.txt" ;
 
-ansible-playbook -u gsd -i hosts-1es.ini reset-site.yaml
-ansible-playbook -u gsd -i hosts-2es.ini playbook.yml
-ansible-playbook -u gsd -i hosts-2es.ini cataio_playbook.yml --tags prepare_setup
+        # Run DETAILED setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-file_"$i"_profiling_detailed.txt" ;
 
-for ((i=1; i <= $RUNS; i++)); do
-    echo "Filebench - CatBpf - ES=2 - Run $i"
-    ansible-playbook -u gsd -i hosts-2es.ini filebench_cataio_playbook.yml --tags cataio -e run_number="$i" | tee "ansible_logs/catbpf-2es_$i.txt" ; #2>&1 ;
-done
+        # Run DETAILED_PATHS setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-file_"$i"_profiling_detailed_paths.txt" ;
 
+        # Run DETAILED_ALL setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-file_"$i"_profiling_detailed_all.txt" ;
 
+        # RUN DETAILED_ALL_PLAIN setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-file_"$i"_profiling_detailed_all_plain.txt" ;
 
-# --------
+        # RUN DETAILED_ALL_KHASH setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_file_profiling_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-file_"$i"_profiling_detailed_all_khash.txt" ;
 
-# for ((i=1; i <= $RUNS; i++)); do
-#     echo "Filebench - CatBpf - ES=1 - Run $i, FB=30MB, FI=600s PROF_TIMES"
-#     ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_30mb -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_30mb_times.txt" ; #2>&1 ;
-#     # echo "Filebench - CatBpf - ES=2 - Run $i, FB=30MB, FI=600s PROF_TIMES"
-#     # ansible-playbook -u gsd -i hosts-2es.ini filebench_cataio_playbook.yml --tags cataio_fb_30mb -e run_number="$i" | tee "ansible_logs/catbpf-2es_"$i"_fb_30mb_times.txt" ; #2>&1 ;
+        # Backup results
+        sudo cp -r -n final_test_results/* /home/gsd/new_profiling_dio_results/
+        sudo rm -fr final_test_results
 
-#     # echo "Filebench - CatBpf - ES=1 - Run $i, FB=10MB, FI=600s"
-#     # ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_10mb_10min -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_10mb_10min.txt" ; #2>&1 ;
+    done
+}
 
-#     # echo "Filebench - CatBpf - ES=1 - Run $i, FB=5MB, FI=600s PROF_TIMES"
-#     # ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_5mb -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_5mb_times.txt" ; #2>&1 ;
+function dio_elk_profiling {
 
-# done
+    setup_kube_cluster
+    mkdir -p /home/gsd/new_profiling_dio_results/
 
-# ansible-playbook -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags destroy_cataio_pipeline #> /dev/null  2>&1
+    for ((i=1; i <= $RUNS; i++)); do
 
-# sudo rm -fr ~/tests_rocksdb/ > /dev/null  2>&1
+        mkdir -p $LOGS_DIR
 
-# echo "RocksDB - Load"
-# ansible-playbook -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags load | tee "ansible_logs/rocksdb_load.txt" # 2>&1 ;
+        # Run RAW setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-1es_"$i"_profiling_raw.txt" ;
 
-# for ((i=1; i <= $RUNS; i++)); do
+        # Run DETAILED setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-1es_"$i"_profiling_detailed.txt" ;
 
-#     # ansible-playbook -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags destroy_cataio_pipeline > /dev/null  2>&1
-#     # docker rm  tests_rocksdb_vanilla_rocksdb_1 > /dev/null  2>&1
-#     # echo "RocksDB - Vanilla - Run $i"
-#     # ansible-playbook  -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags vanilla -e run_number="$i" | tee "ansible_logs/rocksdb_vanilla_run$i.txt" ; #2>&1 ;
+        # Run DETAILED_PATHS setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-1es_"$i"_profiling_detailed_paths.txt" ;
 
-#     docker rm  tests_rocksdb_catbpf_rocksdb_1 > /dev/null  2>&1
-#     echo "RocksDB - CatBpf  - Run $i - 1 ES"
-#     ansible-playbook  -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags catbpf -e run_number="$i" | tee "ansible_logs/rocksdb_catbpf_1es_run$i.txt" # 2>&1 ;
+        # Run DETAILED_ALL setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-1es_"$i"_profiling_detailed_all.txt" ;
 
-#     # docker rm  tests_rocksdb_strace_rocksdb_1 > /dev/null  2>&1
-#     # echo "RocksDB - Strace - Run $i"
-#     # ansible-playbook  -i hosts-1es.ini -u gsd rocksdb_cataio_playbook.yml --tags strace -e run_number="$i" | tee "ansible_logs/rocksdb_strace_run$i.txt" ; #2>&1 ;
+        # RUN DETAILED_ALL_PLAIN setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-1es_"$i"_profiling_detailed_all_plain.txt" ;
 
-# done
+        # RUN DETAILED_ALL_KHASH setup
+        mount_dio_pipeline
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_profiling_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-1es_"$i"_profiling_detailed_all_khash.txt" ;
 
+        # Backup results
+        sudo cp -r -n final_test_results/* /home/gsd/new_profiling_dio_results/
+        sudo rm -fr final_test_results
+
+    done
+}
 
 # --------
 
-# for ((i=1; i <= $RUNS; i++)); do
-#     echo "Filebench - CatBpf - ES=1 - Run $i, FB=4MB, FI=30s"
-#     ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_4mb -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_4mb.txt" ; #2>&1 ;
-# done
+function dio_filters {
 
-# for ((i=1; i <= $RUNS; i++)); do
-#     echo "Filebench - CatBpf - ES=1 - Run $i, FB=7000000, FI=60s"
-#     ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fi_1m -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_f1_1m.txt" ; #2>&1 ;
-# done
+    setup_kube_cluster
 
-# for ((i=1; i <= $RUNS; i++)); do
-#     echo "Filebench - CatBpf - ES=1 - Run $i, FB=10MB, FI=30s"
-#     ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_10mb -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_10mb.txt" ; #2>&1 ;
-# done
+    for ((i=1; i <= $RUNS; i++)); do
+        mount_dio_pipeline
+        echo "Filebench - DIO - 1 ES, filter tid - Run $i"
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_filter_tid -e run_number="$i" | tee "$LOGS_DIR/t07_dio-1es_"$i"_detailed_filter_tid.txt" ;
 
-# for ((i=1; i <= $RUNS; i++)); do
-#     echo "Filebench - CatBpf - ES=1 - Run $i, FB=100MB, FI=600s"
-#     ansible-playbook -u gsd -i hosts-1es.ini filebench_cataio_playbook.yml --tags cataio_fb_100mb -e run_number="$i" | tee "ansible_logs/catbpf-1es_"$i"_fb_100mb.txt" ; #2>&1 ;
-# done
+        mount_dio_pipeline
+        echo "Filebench - DIO - 1 ES, filter orwc - Run $i"
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_filter_orwc -e run_number="$i" | tee "$LOGS_DIR/t08_dio-1es_"$i"_detailed_filter_orwc.txt" ;
+
+        mount_dio_pipeline
+        echo "Filebench - DIO - 1 ES, filter read - Run $i"
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_filter_read -e run_number="$i" | tee "$LOGS_DIR/t09_dio-1es_"$i"_detailed_filter_read.txt" ;
+
+        mount_dio_pipeline
+        echo "Filebench - DIO - 1 ES, filter stat - Run $i"
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_elk_detailed_filter_stat -e run_number="$i" | tee "$LOGS_DIR/t10_dio-1es_"$i"_detailed_filter_stat.txt" ;
+    done
+}
+
+
+# vanilla
+# old_dio_file
+# dio_null
+# strace
+# catbpf
+# dio_elk
+# dio_filters
+
+dio_null_profiling
+dio_elk_profiling
+
+"$@"

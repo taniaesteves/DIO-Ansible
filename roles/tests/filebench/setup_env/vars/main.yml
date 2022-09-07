@@ -1,0 +1,4 @@
+---
+
+filebench_dir: "{{results_dir}}/tests_filebench"
+filebench_data_dir: "{{test_data_dir}}/filebench"

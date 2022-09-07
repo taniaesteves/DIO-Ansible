@@ -1,0 +1,42 @@
+tracer:
+  session_name: {{session_id}}
+  events: {{dio_tareget_events}}
+  target_paths: {{dio_tareget_paths}}
+  target_pids: []
+  target_tids: []
+  trace_old_processes: true
+  content_form: "{{dio_content_form}}"
+  capture_arg_paths: false
+  capture_proc_events: false
+  discard_sock_addr: false
+  discard_sock_data: false
+  discard_errors: false
+  discard_directories: true
+  maps_strategy: "one2many"
+  perfmap_size: 65536
+  show_stats: true
+  stats_path: "/dio_data/dio-stats.json"
+  number_consumers: 4
+  wait_timeout: {{dio_wait_timeout}}
+
+output:
+  file_writer:
+    enabled: {{dio_filewriter_enabled}}
+    filename: "/dio_data/dio-trace.json"
+  elasticsearch_writer:
+    enabled: {{dio_eswriter_enabled}}
+    servers: [ {{es_nodes_ips_list | regex_replace('\"', '"') }} ]
+    username: {{dio_es_user}}
+    password: {{dio_es_pass}}
+    flush_bytes: {{dio_es_flush_bytes}}
+    flush_interval: {{dio_es_flush_interval}}
+
+logger:
+  debug_mode: false
+  log2stdout: true
+  log2file: false
+  log_filename: "/dio_data/dio-log.txt"
+  profiling_on: {{dio_prof_on}}
+  profiling_result: "/dio_data/dio-profiling.json"
+  save_timestamps: {{dio_prof_times}}
+  profiling_times_result: "/dio_data/dio-profiling-times.json"

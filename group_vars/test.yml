@@ -1,47 +1,9 @@
 ---
 
-filebench_dir: "/home/{{ansible_user}}/tests_filebench"
-rocksdb_dir: "/home/{{ansible_user}}/tests_rocksdb"
+results_dir: "/home/{{ansible_user}}/dio_tests_results"
+tracing_data_dir: "/mnt/nvme/tracing_data"
+test_data_dir: "{{results_dir}}/test_data"
+
+# ----
 
 run_number: 0
-
-catbpf_events: ["all"]
-catbpf_target_paths: []
-catbpf_wait_timeout: -1
-
-catbpf_filewriter_enabled: false
-catbpf_eswriter_enabled: true
-
-cat_n_result_dir: catbpf
-cat_o_result_dir: catbpf_original
-
-catbpf_original_flags: "--stats -c 4"
-
-
-catbpf_content_form: "off"
-filter_tid: false
-filter_paths:
-
-
-catbpf_filebench_entrypoint: "/usr/share/catbpf/bin/catbpf -- filebench -f /filebench/workloads/fileserver.f"
-catbpf_filebench_entrypoint_filter_tid: "/filebench/trace_filebench_tid.sh"
-
-
-catbpf_es_flush_bytes: 7000000
-catbpf_es_flush_interval: 30
-catbpf_prof_on: false
-catbpf_prof_times: false
-
-# main_nodes_ips_list: "{% set IP_ARR=[] %}{% for host in groups['node'] %}{% if IP_ARR.insert(loop.index,hostvars[host]['inventory_hostname']) %}{% endif %}{% endfor %}{{IP_ARR|join(', ')}}"
-
-rocksdb_load: "100000000"
-rocksdb_ops: "100000000"
-rocksdb_scanops: "100000000"
-
-# rocksdb_load: "50000000"
-# rocksdb_ops: "50000000"
-# rocksdb_scanops: "50000000"
-
-# rocksdb_load: "5000000"
-# rocksdb_ops: "5000000"
-# rocksdb_scanops: "5000000"

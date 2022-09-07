@@ -1,0 +1,68 @@
+---
+
+
+- name: Destroy DIO Pipeline
+  hosts: master
+  gather_facts: no
+  roles:
+    - { role: dio/delete_pipeline }
+    - { role: dio/delete_pvs,       run_all: 'true' }
+  tags:
+    - never
+    - rebuild_dio_pipeline
+    - destroy_dio_pipeline
+    - dio
+
+- name: Build DIO Pipeline
+  hosts: master
+  gather_facts: no
+  roles:
+    - { role: dio/create_pvs,       run_all: 'true' }
+    - { role: dio/create_pipeline,  run_all: 'true' }
+    - { role: dio/import_dashboards }
+  tags:
+    - never
+    - rebuild_dio_pipeline
+    - dio
+
+- name: Clear caches
+  hosts: all
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Clearing the cache
+    shell: sync; echo 3 > /proc/sys/vm/drop_caches
+    register: caches_clean
+  tags:
+    - always
+
+- name: Load
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: rocksdb/load, when: caches_clean, tags: ['never','load'] }
+
+
+
+- name: Vanilla
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: rocksdb/vanilla, when: caches_clean, tags: ['never','vanilla'] }
+
+
+- name: DIO
+  hosts: test
+  gather_facts: yes
+  become: no
+  roles:
+    - { role: rocksdb/dio, when: caches_clean, tags: ['never','dio'], filter_paths: 'true', dio_tareget_events: ["open", "openat", "creat", "read", "pread64", "write", "pwrite64", "close", "fsync", "fdatasync"] }
+
+- name: Strace
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: rocksdb/strace, when: caches_clean, tags: ['never','strace'] }
