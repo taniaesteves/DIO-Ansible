@@ -3,9 +3,10 @@
 # Run as follow: $ python3 parse_profiling.py <path to results dir>
 # The path to results dir refer to the folder containing the different types of tests.
 # The script will search for subdirectories (e.g., 'run_1', 'run_2', etc.) and parse the 'dio-profiling.json' file inside each subdirectory.
+from email import header
+from pprint import pprint
 import sys
 import os
-import json
 import csv
 import collections
 import commons
@@ -29,7 +30,7 @@ def parseSetup(path):
     for cur in runs_data:
         values = runs_data[cur]
         avg = commons.Average(values) / 1000000
-        dev = commons.STDev(values)
+        dev = commons.STDev(values) / 1000000
         runs_data[cur] = (avg, dev)
 
     # sort dictionary
@@ -39,7 +40,7 @@ def parseSetup(path):
 def parseAll(input_dir):
     setup_dirs = commons.ListDir(input_dir)
     all_data_dic = dict()
-    header = ["measure (ms)"]
+    header = []
     processed_dirs = 0
 
     for dir in setup_dirs:
@@ -52,30 +53,44 @@ def parseAll(input_dir):
 
         for key in data:
             if not key in all_data_dic:
-                all_data_dic[key] = [0] * processed_dirs
-            all_data_dic[key].append(data[key])
+                all_data_dic[key] = dict()
 
-        for key in all_data_dic:
-            if key not in data:
-                print("key '{0}' not in data".format(key))
-                all_data_dic[key].append((0,0))
+            if not dir in all_data_dic[key]:
+                all_data_dic[key][dir] = dict()
 
-        header.append(dir+"-AVG")
-        header.append(dir+"-DEV")
+            all_data_dic[key][dir]["AVG"] = data[key][0]
+            all_data_dic[key][dir]["DEV"] = data[key][1]
+
+        header.append(dir)
         processed_dirs += 1
 
     return header, all_data_dic
 
-def storeCSV(header, data, output_file):
+def storeCSV(setups, data, output_file):
     with open(output_file, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f, delimiter=";")
+
+        header = ["measure (ms)"]
+        for setup in setups:
+            header.append(setup)
+            header.append(setup+"-DEV")
         writer.writerow(header)
-        for row in data:
-            cur_data = [row]
-            for val in data[row]:
-                cur_data.append(val[0])
-                cur_data.append(val[1])
-            writer.writerow(commons.LocalizeFloats(cur_data))
+        pprint(data)
+
+        for param in data:
+            row = [param]
+
+            for setup in sorted(setups):
+                if setup == "measure (ms)":
+                    continue
+                if setup in data[param]:
+                    row.append(data[param][setup]["AVG"])
+                    row.append(data[param][setup]["DEV"])
+                else:
+                    row.append(0)
+                    row.append(0)
+            print(row)
+            writer.writerow(commons.LocalizeFloats(row))
 
 def main():
     if (len(sys.argv)) <= 1:

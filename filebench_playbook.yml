@@ -480,6 +480,7 @@
         setup_res_dir: "t01_dio_null_profiling_raw",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -496,6 +497,7 @@
         setup_res_dir: "t02_dio_null_profiling_detailed",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -516,6 +518,7 @@
         setup_res_dir: "t03_dio_null_profiling_detailed_paths",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -536,6 +539,7 @@
         setup_res_dir: "t04_dio_null_profiling_detailed_all",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -556,6 +560,7 @@
         setup_res_dir: "t05_dio_null_profiling_detailed_all_plain",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -576,6 +581,131 @@
         setup_res_dir: "t06_dio_null_profiling_detailed_all_khash",
         dio_eswriter_enabled: false,
         dio_filewriter_enabled: false,
+        dio_nopwriter_enable: false,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: true,
+        dio_detail_with_content: "kernel_hash",
+        dio_detail_with_arg_paths: true,
+        dio_detail_with_sock_addr: true,
+        dio_detail_with_sock_data: true,
+      }
+
+# -------- NOP
+
+- name: DIO (NOP - raw) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_raw'],
+        setup_res_dir: "t01_dio_nop_profiling_raw",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: false
+      }
+
+- name: DIO (NOP - detailed) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_detailed'],
+        setup_res_dir: "t02_dio_nop_profiling_detailed",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: true,
+        dio_detail_with_content: "off",
+        dio_detail_with_arg_paths: false,
+        dio_detail_with_sock_addr: false,
+        dio_detail_with_sock_data: false,
+      }
+
+- name: DIO (NOP - detailed_paths) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_detailed_paths'],
+        setup_res_dir: "t03_dio_nop_profiling_detailed_paths",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: true,
+        dio_detail_with_content: "off",
+        dio_detail_with_arg_paths: true,
+        dio_detail_with_sock_addr: false,
+        dio_detail_with_sock_data: false,
+      }
+
+- name: DIO (NOP - detailed_all) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_detailed_all'],
+        setup_res_dir: "t04_dio_nop_profiling_detailed_all",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: true,
+        dio_detail_with_content: "off",
+        dio_detail_with_arg_paths: true,
+        dio_detail_with_sock_addr: true,
+        dio_detail_with_sock_data: true,
+      }
+
+- name: DIO (NOP - detailed_all_plain) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_detailed_all_plain'],
+        setup_res_dir: "t05_dio_nop_profiling_detailed_all_plain",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
+        dio_tareget_events: ["all"],
+        dio_wait_timeout: -1,
+        dio_prof_on: true,
+        dio_prof_times: true,
+        dio_detailed_data: true,
+        dio_detail_with_content: "plain",
+        dio_detail_with_arg_paths: true,
+        dio_detail_with_sock_addr: true,
+        dio_detail_with_sock_data: true,
+      }
+
+- name: DIO (NOP - detailed_all_khash) - Profiling ON
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/filebench/dio, when: caches_clean, tags: ['never','dio_nop_profiling_detailed_all_khash'],
+        setup_res_dir: "t06_dio_nop_profiling_detailed_all_khash",
+        dio_eswriter_enabled: false,
+        dio_filewriter_enabled: false,
+        dio_nopwriter_enable: true,
         dio_tareget_events: ["all"],
         dio_wait_timeout: -1,
         dio_prof_on: true,
@@ -838,6 +968,7 @@
         dio_tareget_events: ["all"],
         filter_tid: true,
         dio_wait_timeout: -1,
+        dio_timeout: 300,
         dio_prof_on: true,
         dio_prof_times: false,
         dio_detailed_data: true,
@@ -857,8 +988,9 @@
         dio_eswriter_enabled: true,
         dio_filewriter_enabled: false,
         dio_tareget_events: ["open","openat","read","pread64","readv","write","pwrite64","writev","close"],
-        filter_tid: true,
+        filter_tid: false,
         dio_wait_timeout: -1,
+        dio_timeout: 300,
         dio_prof_on: true,
         dio_prof_times: false,
         dio_detailed_data: true,
@@ -878,8 +1010,9 @@
         dio_eswriter_enabled: true,
         dio_filewriter_enabled: false,
         dio_tareget_events: ["read"],
-        filter_tid: true,
+        filter_tid: false,
         dio_wait_timeout: -1,
+        dio_timeout: 300,
         dio_prof_on: true,
         dio_prof_times: false,
         dio_detailed_data: true,
@@ -899,8 +1032,9 @@
         dio_eswriter_enabled: true,
         dio_filewriter_enabled: false,
         dio_tareget_events: ["stat"],
-        filter_tid: true,
+        filter_tid: false,
         dio_wait_timeout: -1,
+        dio_timeout: 300,
         dio_prof_on: true,
         dio_prof_times: false,
         dio_detailed_data: true,

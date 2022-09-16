@@ -181,6 +181,40 @@ function dio_elk {
 
 # --------
 
+function dio_nop_profiling {
+    # reset kubernetes cluster
+    reset_kube_cluster
+    mkdir -p /home/gsd/new_profiling_dio_results/
+
+    for ((i=1; i <= $RUNS; i++)); do
+
+        mkdir -p $LOGS_DIR
+
+        # Run RAW setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_raw -e run_number="$i" | tee "$LOGS_DIR/t01_dio-nop_"$i"_profiling_raw.txt" ;
+
+        # Run DETAILED setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_detailed -e run_number="$i" | tee "$LOGS_DIR/t02_dio-nop_"$i"_profiling_detailed.txt" ;
+
+        # Run DETAILED_PATHS setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_detailed_paths -e run_number="$i" | tee "$LOGS_DIR/t03_dio-nop_"$i"_profiling_detailed_paths.txt" ;
+
+        # Run DETAILED_ALL setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_detailed_all -e run_number="$i" | tee "$LOGS_DIR/t04_dio-nop_"$i"_profiling_detailed_all.txt" ;
+
+        # RUN DETAILED_ALL_PLAIN setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_detailed_all_plain -e run_number="$i" | tee "$LOGS_DIR/t05_dio-nop_"$i"_profiling_detailed_all_plain.txt" ;
+
+        # RUN DETAILED_ALL_KHASH setup
+        ansible-playbook -u gsd -i hosts.ini filebench_playbook.yml --tags dio_nop_profiling_detailed_all_khash -e run_number="$i" | tee "$LOGS_DIR/t06_dio-nop_"$i"_profiling_detailed_all_khash.txt" ;
+
+        # Backup results
+        sudo cp -r -n final_test_results/* /home/gsd/new_profiling_dio_results/
+        sudo rm -fr final_test_results
+
+    done
+}
+
 function dio_null_profiling {
     # reset kubernetes cluster
     reset_kube_cluster

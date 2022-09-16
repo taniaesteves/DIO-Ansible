@@ -18,8 +18,11 @@ tracer:
   stats_path: "/dio_data/dio-stats.json"
   number_consumers: {{dio_number_consumers}}
   wait_timeout: {{dio_wait_timeout}}
+  timeout: {{dio_timeout}}
 
 output:
+  nop_writer:
+    enabled: {{dio_nopwriter_enable}}
   file_writer:
     enabled: {{dio_filewriter_enabled}}
     filename: "/dio_data/dio-trace.json"

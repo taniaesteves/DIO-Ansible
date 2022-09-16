@@ -35,7 +35,7 @@
 - name: Running filebench (with DIO) [run={{run_number}}]
   docker_container:
     name: dio_filebench
-    image: taniaesteves/filebench_dio:v2
+    image: taniaesteves/filebench_dio:latest
     state: started
     recreate: yes
     detach: false

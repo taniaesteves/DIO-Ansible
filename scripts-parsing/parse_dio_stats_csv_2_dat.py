@@ -4,6 +4,7 @@ import pprint
 
 def parseCSV(path):
     data = dict()
+    list_params = []
     cur_param = ""
     reader = csv.DictReader(open(path), delimiter=';')
     while True:
@@ -12,31 +13,42 @@ def parseCSV(path):
             for key in dictobj:
                 if (key == 'events'):
                     cur_param = dictobj[key]
-                    if (cur_param not in data):
-                        data[cur_param] = {}
                     continue
                 setup = key
+                if cur_param not in list_params:
+                    list_params.append(cur_param)
                 if ("AVG" in setup):
                     setup = key.replace("-AVG","")
                     VAL = "AVG"
                 elif ("DEV" in setup):
                     setup = key.replace("-DEV","")
                     VAL = "DEV"
-                if setup not in data[cur_param]:
-                    data[cur_param][setup] = {}
-                data[cur_param][setup][VAL] = dictobj[key]
+                if (setup not in data):
+                    data[setup] = {}
+                if cur_param not in data[setup]:
+                    data[setup][cur_param] = {}
+                data[setup][cur_param][VAL] = dictobj[key]
         except StopIteration:
             break
-    return data
+    return list_params, data
 
-def storeDAT(data, path):
+def storeDAT(list_params, data, path):
     with open(path, 'w',  newline='') as f:
-        for key in data:
-            print("#{0}; AVG; DEV;".format(key).replace("_", "\\\\\\_"), file=f)
-            for setup in data[key]:
-                line = "{0}; {1}; {2};".format(setup, data[key][setup]["AVG"], data[key][setup]["DEV"]).replace(",",".").replace("_", "\\\\\\_")
-                print(line, file=f)
-            print("\n", file=f)
+        header = "stats;"
+        data_lines = []
+
+        for param in sorted(list_params):
+            header += " {0}; {0}-DEV;".format(param)
+        print(header.replace("_", "\\\\\\_"), file=f)
+
+        for setup in data:
+            line = "{0};".format(setup)
+            for param in sorted(list_params):
+                line += " {0}; {1};".format(data[setup][param]["AVG"], data[setup][param]["DEV"]).replace(",",".")
+            data_lines.append(line)
+
+        for line in data_lines:
+            print(line.replace("_", "\\\\\\_"), file=f)
 
 def main():
     if (len(sys.argv)) <= 1:
@@ -48,9 +60,9 @@ def main():
 
     try:
         print("> Parsing CSV file '{0}'.\n".format(input_file))
-        data = parseCSV(input_file)
+        list_params, data = parseCSV(input_file)
         pprint.pprint(data)
-        storeDAT(data, output_file)
+        storeDAT(list_params, data, output_file)
         print("\n> Results saved to file '{0}'.".format(output_file))
     except Exception as e:
         print("ERROR: {0}".format(e))

@@ -11,7 +11,9 @@ dio_maps_strategy: "one2many"
 dio_perfmap_size: 65536
 dio_number_consumers: 4
 dio_wait_timeout: -1
+dio_timeout: -1
 
+dio_nopwriter_enable: false
 dio_filewriter_enabled: false
 dio_eswriter_enabled: true
 dio_es_flush_bytes: 7000000
