@@ -7,3 +7,4 @@ test_data_dir: "{{results_dir}}/test_data"
 # ----
 
 run_number: 0
+suffix: ""

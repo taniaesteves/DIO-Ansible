@@ -18,13 +18,49 @@ def parseSetup(path):
         print("++++++ Parsing file '{0}'".format(run_p_file))
         data = commons.GetJsonData(run_p_file)
 
+        event_type_info = None
+        if "path" in data["tracer_stats"]:
+            event_type_info = data["tracer_stats"]["path"]
+
+        process_info = None
+        if "process" in data["tracer_stats"]:
+            process_info = data["tracer_stats"]["process"]
+
+        # for event_type in data["bpf_stats"]:
+        #     if event_type["event"] == "event_path":
+        #         print("Event paths calls: {0}".format(event_type["calls"]))
+        #         event_type_info = event_type
+        #         break
+
         for m in data["tracer_stats_total"]:
             if not m in runs_data:
                 runs_data[m] = []
-            runs_data[m].append(data["tracer_stats_total"][m])
+
+            if m == "calls" or m == "returned" or m == "lost" or m == "incomplete" or m == "saved":
+                subtract = 0
+                if event_type_info != None and m in event_type_info:
+                    if m+"_event_path" not in runs_data:
+                        runs_data[m+"_event_path"] = []
+                    runs_data[m+"_event_path"].append(event_type_info[m])
+                    subtract += event_type_info[m]
+                    print("Event paths {0}: {1}".format(m, event_type_info[m]))
+                if process_info != None and m in process_info:
+                    if m+"_process" not in runs_data:
+                        runs_data[m+"_process"] = []
+                    runs_data[m+"_process"].append(process_info[m])
+                    subtract += process_info[m]
+                    print("Process {0}: {1}".format(m, process_info[m]))
+                runs_data[m].append(data["tracer_stats_total"][m] - subtract)
+                print("{0} val: {1}, sub: {2}".format(m, data["tracer_stats_total"][m], subtract))
+            else:
+                runs_data[m].append(data["tracer_stats_total"][m])
+
+
+    print(runs_data)
 
     # replace list of values by its average and standard deviation
     for cur in runs_data:
+        print(cur)
         values = runs_data[cur]
         avg = commons.Average(values)
         dev = commons.STDev(values)
@@ -58,10 +94,12 @@ def parseAll(input_dir):
         header.append(dir+"-AVG")
         header.append(dir+"-DEV")
         processed_dirs += 1
+        input("Press Enter to continue...")
 
     return header, all_data_dic
 
 def storeCSV(header, data, output_file):
+    print("storeCSV", header, data)
     with open(output_file, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f, delimiter=";")
         writer.writerow(header)
@@ -89,7 +127,7 @@ def main():
         print("\n> Results saved to file '{0}'.".format(output_file))
 
     except Exception as e:
-        print("Error: {0}".format(e))
+        print("Error [{0}]: {1}".format(e.__traceback__.tb_lineno, e))
 
 
 if __name__ == "__main__":

@@ -5,30 +5,33 @@
 - name: Delete DIO results directory (if it exists)
   become: yes
   file:
-    path: "{{ rocksdb_dir }}/dio_results"
+    path: "{{ tracing_data_dir }}/dio/dio_data"
     state: absent
 
 - name: Create DIO results directory
   file:
-    path: "{{ rocksdb_dir }}/dio_results"
+    path: "{{ tracing_data_dir }}/dio/dio_data"
     state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    recurse: yes
 
 - name: Delete RocksDB directory (if it exists)
   become: yes
   file:
-    path: "{{ rocksdb_dir }}/rocksdb_data"
+    path: "{{ rocksdb_data_dir }}/rocksdb_data"
     state: absent
 
 - name: Create RocksDB kvstore directory
   file:
-    path: "{{ rocksdb_dir }}/rocksdb_data/kvstore"
+    path: "{{ rocksdb_data_dir }}/rocksdb_data/kvstore"
     state: directory
 
 - name: Copy files from backup_kvstore
   copy:
     remote_src: True
-    src: "{{ rocksdb_dir }}/backup_kvstore/"
-    dest: "{{ rocksdb_dir }}/rocksdb_data/kvstore/"
+    src: "{{ rocksdb_data_dir }}/backup_kvstore/"
+    dest: "{{ rocksdb_data_dir }}/rocksdb_data/kvstore/"
 
 - name: Generate random and timestamp strings
   set_fact:
@@ -53,7 +56,7 @@
 
 - name: Set target paths
   set_fact:
-    dio_tareget_paths: [ "{{ rocksdb_dir }}/rocksdb_data/kvstore", "/rocks_db/workloads/kvstore" ]
+    dio_tareget_paths: [ "{{ rocksdb_data_dir }}/rocksdb_data/kvstore", "/rocks_db/workloads/kvstore" ]
   when: filter_paths|bool == true
 
 - debug:
@@ -62,7 +65,6 @@
 - name: Get hostname
   shell: uname -n
   register: target_hostname
-
 
 - name: Create dio config file
   template:
@@ -83,7 +85,7 @@
   become: yes
 
 - name: Start Dstat
-  shell: screen -S "rocksdb_CAT_N_DSTAT_{{run_number}}" -d -m python3 /usr/share/dstat/dstat --time --cpu --mem --net --disk --swap --output "{{ rocksdb_dir }}/dio_results/dstat.csv"
+  shell: screen -S "rocksdb_DSTAT_{{run_number}}" -d -m python3 /usr/share/dstat/dstat --time --cpu --mem --net --disk --swap --output "{{ tracing_data_dir }}/dio/dstat.csv"
 
 - name: Pause for 10 secons
   pause:
@@ -152,25 +154,30 @@
     seconds: 10
 
 - name: Stop dstat
-  shell: screen -X -S "rocksdb_CAT_N_DSTAT_{{run_number}}" quit
+  shell: screen -XS "rocksdb_DSTAT_{{run_number}}" quit
   ignore_errors: true
 
-- name: Save logs
-  shell: docker logs tests_rocksdb_dio_rocksdb_1 > "{{ rocksdb_dir }}/dio_results/docker_logs.txt" 2>&1
+- name: Kill all screen sessions
+  shell: pkill screen
+  ignore_errors: true
+  become: yes
 
-- name: Copy files from rocksdb_data/results to dio_results
+- name: Save logs
+  shell: docker logs tests_rocksdb_dio_rocksdb_1 > "{{ tracing_data_dir }}/dio/docker_logs.txt" 2>&1
+
+- name: Save rocksdb results
   copy:
     remote_src: True
-    src: "{{ rocksdb_dir }}/rocksdb_data/results/"
-    dest: "{{ rocksdb_dir }}/dio_results"
+    src: "{{ rocksdb_data_dir }}/rocksdb_data/results/"
+    dest: "{{ tracing_data_dir }}/dio/"
 
-- shell: (cd "{{ rocksdb_dir }}/dio_results"; find . -maxdepth 1 -type f) | cut -d'/' -f2
+- shell: (cd "{{ tracing_data_dir }}/dio"; find "$PWD"/* -maxdepth 2 -type f)
   register: files_to_copy
 
 - name: Save results
   fetch:
-    src: "{{ rocksdb_dir }}/dio_results/{{ file_item }}"
-    dest: "final_test_results/rocksdb/{{cat_n_result_dir}}/run_{{run_number}}/"
+    src: "{{ file_item }}"
+    dest: "final_test_results/rocksdb/{{setup_res_dir}}{{suffix}}/run_{{run_number}}/"
     flat: yes
   with_items: "{{ files_to_copy.stdout_lines }}"
   loop_control:

@@ -12,8 +12,8 @@ services:
             rate: 200mb
       command: ycsbwklda 8 8 1024 vanilla-ycsbwklda-8-8-1024
       volumes:
-        - {{ rocksdb_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
-        - {{ rocksdb_dir }}/rocksdb_data/results:/rocks_db/workloads/results
+        - {{ rocksdb_data_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
+        - {{ rocksdb_data_dir }}/rocksdb_data/results:/rocks_db/workloads/results
       environment:
         - ROCKSDB_LOAD={{rocksdb_load}}
         - ROCKSDB_OPS={{rocksdb_ops}}

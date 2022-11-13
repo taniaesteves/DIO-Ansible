@@ -8,6 +8,8 @@ def ListDir(path):
     return sorted(os.listdir(path))
 
 def Average(lst):
+    if len(lst) == 0:
+        return 0
     return float(round(mean(lst), 3))
 
 def STDev(lst):

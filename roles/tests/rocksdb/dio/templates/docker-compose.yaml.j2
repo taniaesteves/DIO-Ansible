@@ -1,7 +1,7 @@
 version: '2.4'
 services:
   dio_rocksdb:
-      image: taniaesteves/rocksdb_dio:v2
+      image: taniaesteves/rocksdb_dio:latest
       pid: host
       hostname: {{ target_hostname.stdout }}
       privileged: true
@@ -17,9 +17,9 @@ services:
         - /sys/kernel/debug/:/sys/kernel/debug/:ro
         - /tmp/dio:/tmp/dio
         - {{ rocksdb_dir }}/dio.yml:/usr/share/dio/conf/config.yaml:ro
-        - {{ rocksdb_dir }}/dio_results:/dio_data
-        - {{ rocksdb_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
-        - {{ rocksdb_dir }}/rocksdb_data/results:/rocks_db/workloads/results
+        - {{ tracing_data_dir }}/dio/dio_data:/dio_data
+        - {{ rocksdb_data_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore
+        - {{ rocksdb_data_dir }}/rocksdb_data/results:/rocks_db/workloads/results
       environment:
         - ROCKSDB_LOAD={{rocksdb_load}}
         - ROCKSDB_OPS={{rocksdb_ops}}

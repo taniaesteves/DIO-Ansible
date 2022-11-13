@@ -57,6 +57,7 @@
     recurse: yes
 
 - name: Copy fileserver workload
+  when: filebench_rate_limit|bool == false
   copy:
     src: files/fileserver.f
     dest: "{{ filebench_dir }}/fileserver.f"
@@ -64,5 +65,18 @@
     group: "{{ ansible_user }}"
     mode:  0644
 
+- name: Copy fileserver rate limiting workload
+  when: filebench_rate_limit|bool == true
+  template:
+    src: "templates/fileserver_rate_limit.f.j2"
+    dest: "{{ filebench_dir }}/fileserver.f"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode:  0644
+
 - shell: echo 0 > /proc/sys/kernel/randomize_va_space
   become: yes
+
+- set_fact:
+    suffix: "_rate_limit_{{ filebench_event_rate }}"
+  when: filebench_rate_limit|bool == true
