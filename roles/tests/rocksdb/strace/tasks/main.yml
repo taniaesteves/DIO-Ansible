@@ -5,30 +5,30 @@
 - name: Delete Strace results directory (if it exists)
   become: yes
   file:
-    path: "{{ rocksdb_dir }}/strace_results"
+    path: "{{ tracing_data_dir }}/strace/strace_data"
     state: absent
 
 - name: Create Strace results directory
   file:
-    path: "{{ rocksdb_dir }}/strace_results"
+    path: "{{ tracing_data_dir }}/strace/strace_data"
     state: directory
 
 - name: Delete RocksDB directory (if it exists)
   become: yes
   file:
-    path: "{{ rocksdb_dir }}/rocksdb_data"
+    path: "{{ rocksdb_data_dir }}/rocksdb_data"
     state: absent
 
 - name: Create RocksDB kvstore directory
   file:
-    path: "{{ rocksdb_dir }}/rocksdb_data/kvstore"
+    path: "{{ rocksdb_data_dir }}/rocksdb_data/kvstore"
     state: directory
 
 - name: Copy files from backup_kvstore
   copy:
     remote_src: True
-    src: "{{ rocksdb_dir }}/backup_kvstore/"
-    dest: "{{ rocksdb_dir }}/rocksdb_data/kvstore/"
+    src: "{{ rocksdb_data_dir }}/backup_kvstore/"
+    dest: "{{ rocksdb_data_dir }}/rocksdb_data/kvstore/"
 
 - name: Get hostname
   shell: uname -n
@@ -44,7 +44,7 @@
   become: yes
 
 - name: Start Dstat
-  shell: screen -S "rocksdb_STRACE_DSTAT_{{run_number}}" -d -m python3 /usr/share/dstat/dstat --time --cpu --mem --net --disk --swap --output "{{ rocksdb_dir }}/strace_results/dstat.csv"
+  shell: screen -S "rocksdb_DSTAT_{{run_number}}" -d -m python3 /usr/share/dstat/dstat --time --cpu --mem --net --disk --swap --output "{{ tracing_data_dir }}/strace/dstat.csv"
 
 - name: Pause for 10 secons
   pause:
@@ -65,26 +65,30 @@
     seconds: 10
 
 - name: Stop dstat
-  shell: screen -X -S "rocksdb_STRACE_DSTAT_{{run_number}}" quit
+  shell: screen -X -S "rocksdb_DSTAT_{{run_number}}" quit
   ignore_errors: true
 
+- name: Kill all screen sessions
+  shell: pkill screen
+  ignore_errors: true
+  become: yes
 
 - name: Save logs
-  shell: docker logs tests_rocksdb_strace_rocksdb_1 > "{{ rocksdb_dir }}/strace_results/docker_logs.txt" 2>&1
+  shell: docker logs tests_rocksdb_strace_rocksdb_1 > "{{ tracing_data_dir }}/strace/docker_logs.txt" 2>&1
 
-- name: Copy files from strace_results to strace_results
+- name: Save rocksdb results
   copy:
     remote_src: True
-    src: "{{ rocksdb_dir }}/rocksdb_data/results/"
-    dest: "{{ rocksdb_dir }}/strace_results"
+    src: "{{ rocksdb_data_dir }}/rocksdb_data/results/"
+    dest: "{{ tracing_data_dir }}/strace"
 
-- shell: (cd "{{ rocksdb_dir }}/strace_results"; find . -maxdepth 1 -type f) | cut -d'/' -f2
+- shell: (cd "{{ tracing_data_dir }}/strace"; find "$PWD"/* -maxdepth 2 -type f)
   register: files_to_copy
 
 - name: Save results
   fetch:
-    src: "{{ rocksdb_dir }}/strace_results/{{ file_item }}"
-    dest: "final_test_results/rocksdb/strace/run_{{run_number}}/"
+    src: "{{ file_item }}"
+    dest: "final_test_results/rocksdb/{{setup_res_dir}}{{suffix}}/run_{{run_number}}/"
     flat: yes
   with_items: "{{ files_to_copy.stdout_lines }}"
   loop_control:

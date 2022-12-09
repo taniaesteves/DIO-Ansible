@@ -27,30 +27,28 @@
 
 - name: Running rocksdb (vanilla) [run={{run_number}}]
   docker_container:
-    name: vanilla_rocksdb
-    image: taniaesteves/rocksdb_vanilla:latest
+    name: rocksdb_load
+    image: taniaesteves/rocksdb_dio:latest
     state: started
     recreate: yes
     detach: false
     pid_mode: host
     hostname: ${HOSTNAME}
-    command: "fillrandom 8 8 1024 fillrandom-8-8-1024"
+    command: load
     volumes:
-      - "{{ rocksdb_data_dir }}/rocksdb_data/kvstore:/rocks_db/workloads/kvstore"
-      - "{{ rocksdb_data_dir }}/rocksdb_data/results:/rocks_db/workloads/results"
+      - "{{ rocksdb_data_dir }}/rocksdb_data/kvstore:/rocksdb/test/kvstore"
+      - "{{ rocksdb_data_dir }}/rocksdb_data/results:/rocksdb/test/results"
     env:
-      ROCKSDB_LOAD: "{{rocksdb_load}}"
-      ROCKSDB_OPS: "{{rocksdb_ops}}"
-      ROCKSDB_SCANOPS: "{{rocksdb_scanops}}"
-  register: rocksdb_vanilla_container
+      DB_BENCH_OPS: "{{db_bench_ops}}"
+  register: rocksdb_load_container
 
 - assert:
     that:
-      - "not rocksdb_vanilla_container.failed"
-      - "rocksdb_vanilla_container.container.State.Status == 'exited'"
+      - "not rocksdb_load_container.failed"
+      - "rocksdb_load_container.container.State.Status == 'exited'"
 
 - name: Save logs
-  shell: docker logs vanilla_rocksdb > "{{ tracing_data_dir }}/load/docker_logs.txt" 2>&1
+  shell: docker logs rocksdb_load > "{{ tracing_data_dir }}/load/docker_logs.txt" 2>&1
 
 - name: Copy files from /rocksdb_data/results/ to load_results
   copy:

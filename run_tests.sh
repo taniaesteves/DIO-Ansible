@@ -4,7 +4,7 @@ LOGS_DIR="final_test_results/ansible_logs"
 
 mkdir -p $LOGS_DIR
 
-STARTING_RUN=2
+STARTING_RUN=1
 RUNS=3
 
 
@@ -414,13 +414,18 @@ function dio_rate_limit {
 }
 
 function rocksdb () {
-    # reset_kube_cluster
+    reset_kube_cluster
+    ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags load | tee "$LOGS_DIR/rocksdb_load_"$i".txt" ;
 
-    # # ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags load | tee "$LOGS_DIR/rocksdb_load_"$i".txt" ;
-    # ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags vanilla | tee "$LOGS_DIR/rocksdb_vanilla_"$i".txt" ;
+    for ((i=$STARTING_RUN; i <= $RUNS; i++)); do
+        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags vanilla -e run_number="$i" | tee "$LOGS_DIR/rocksdb_vanilla_"$i".txt" ;
 
-    # setup_kube_cluster
-    ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags dio | tee "$LOGS_DIR/rocksdb_dio_"$i".txt" ;
+        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags strace -e run_number="$i" | tee "$LOGS_DIR/rocksdb_strace_"$i".txt" ;
+
+        setup_kube_cluster
+        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags dio -e run_number="$i" | tee "$LOGS_DIR/rocksdb_dio_"$i".txt" ;
+    done
+
 }
 
 function help () {
