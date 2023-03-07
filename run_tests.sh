@@ -422,6 +422,8 @@ function rocksdb () {
 
         ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags strace -e run_number="$i" | tee "$LOGS_DIR/rocksdb_strace_"$i".txt" ;
 
+        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags sysdig -e run_number="$i" | tee "$LOGS_DIR/rocksdb_sysdig_"$i".txt" ;
+
         setup_kube_cluster
         ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags dio -e run_number="$i" | tee "$LOGS_DIR/rocksdb_dio_"$i".txt" ;
     done

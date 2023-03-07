@@ -83,3 +83,14 @@
         tags: ['never','strace'],
         setup_res_dir: "strace_ycsb_wa"
       }
+
+- name: Sysdig
+  hosts: test
+  gather_facts: no
+  become: no
+  roles:
+    - { role: tests/rocksdb/sysdig,
+        when: caches_clean,
+        tags: ['never','sysdig'],
+        setup_res_dir: "sysdig_ycsb_wa"
+      }
