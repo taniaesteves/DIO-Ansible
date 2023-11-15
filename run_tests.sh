@@ -418,11 +418,13 @@ function rocksdb () {
     ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags load | tee "$LOGS_DIR/rocksdb_load_"$i".txt" ;
 
     for ((i=$STARTING_RUN; i <= $RUNS; i++)); do
+        reset_kube_cluster
+
         ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags vanilla -e run_number="$i" | tee "$LOGS_DIR/rocksdb_vanilla_"$i".txt" ;
 
-        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags strace -e run_number="$i" | tee "$LOGS_DIR/rocksdb_strace_"$i".txt" ;
-
         ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags sysdig -e run_number="$i" | tee "$LOGS_DIR/rocksdb_sysdig_"$i".txt" ;
+
+        ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags strace -e run_number="$i" | tee "$LOGS_DIR/rocksdb_strace_"$i".txt" ;
 
         setup_kube_cluster
         ansible-playbook -u gsd -i hosts.ini rocksdb_dio_playbook.yml --tags dio -e run_number="$i" | tee "$LOGS_DIR/rocksdb_dio_"$i".txt" ;

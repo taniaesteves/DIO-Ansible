@@ -1,7 +1,7 @@
 version: '2.4'
 services:
   strace_rocksdb:
-      image: taniaesteves/rocksdb_dio:latest
+      image: taniaesteves/rocksdb:v5.17.2
       pid: host
       hostname: {{ target_hostname.stdout }}
       privileged: true

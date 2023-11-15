@@ -28,7 +28,7 @@
 - name: Running rocksdb (vanilla) [run={{run_number}}]
   docker_container:
     name: rocksdb_load
-    image: taniaesteves/rocksdb_dio:latest
+    image: taniaesteves/rocksdb:v5.17.2
     state: started
     recreate: yes
     detach: false
